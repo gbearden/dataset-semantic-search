@@ -1,0 +1,33 @@
+name: Deploy to Hugging Face Spaces
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Only deploy after tests pass
+    needs: []
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history needed for HF git push
+
+      - name: Prepare HF Spaces README
+        run: |
+          # HF Spaces reads README.md for Space metadata (title, sdk, license).
+          # We keep our project README as-is on GitHub and swap in the HF one only for the push.
+          cp hf_spaces_readme.md README.md
+          git config user.email "actions@github.com"
+          git config user.name "GitHub Actions"
+          git add README.md
+          git commit -m "chore: swap in HF Spaces README for deployment" || true
+
+      - name: Push to Hugging Face Spaces
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          git remote add hf https://gbearden:${HF_TOKEN}@huggingface.co/spaces/gbearden/dataset-semantic-search
+          git push hf main --force
